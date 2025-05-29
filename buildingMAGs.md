@@ -233,14 +233,9 @@ gtdbtk classify_wf \
 
 ```
 
+
+## Map reads to MAGs and ID who is present in diff treatments
 ```
-conda create -n kraken2_env -c bioconda -c conda-forge python=3.10 kraken2
-conda activate kraken2_env
-```
-
-
-
-
 cat dastool_output_DASTool_bins/*.fa > all_MAGs.fna
 
 bowtie2-build all_MAGs.fna all_MAGs_index
@@ -272,24 +267,42 @@ coverm genome \
   --min-read-percent-identity 95 \
   --threads 12 \
   > coverm_results.tsv
- 
+ ```
+
+## ID Taxonomy of unmapped reads
+
+```
+samtools addreplacerg -r "ID:S1\tSM:sample1" -o 55.rg.bam 55.sorted.bam
+samtools addreplacerg -r "ID:S1\tSM:sample1" -o atm.rg.bam atm.sorted.bam
+
+samtools merge merged_sorted_ATM_55.bam atm.rg.bam 55.rg.bam
+samtools index merged_sorted_ATM_55.bam
+
+samtools view -b -f 4 merged_sorted_ATM_55.bam > unmapped_ATM_55.bam
+samtools fastq unmapped_ATM_55.bam -1 unmapped_R1.fastq -2 unmapped_R2.fastq -s unmapped_unpaired.fastq
+
+cat unmapped_R1.fastq unmapped_R2.fastq unmapped_unpaired.fastq > all_unmapped.fastq
 
 conda create -n kraken_env -c bioconda -c conda-forge kraken2
 conda activate kraken_env
+conda install -c bioconda krona
 
-mkdir -p kraken_gtdb_db
-kraken2-build --download-taxonomy --db kraken_gtdb_db
+kraken2 --db /data_store/kraken_database \
+  --threads 12 \
+  --output kraken_output/kraken_all_unmapped.out \
+  --report kraken_output/kraken_all_unmapped.report \
+  --use-names \
+  --single all_unmapped.fastq
 
-for genome in /scratch/mdesmarais/PRT_DGE/co-assembly/megahit_out/dastool_output_DASTool_bins/*.fna; do
-  kraken2-build --add-to-library "$genome" --db kraken_gtdb_db
-done
+bash ~/.conda/envs/kraken2_env/opt/krona/updateTaxonomy.sh
 
-kraken2-build --add-to-library /scratch/mdesmarais/PRT_DGE/co-assembly/megahit_out/dastool_output_DASTool_bins/*.fna --db /kraken_gtdb_db
 
-kraken2-build --build --db kraken_gtdb_db
+cut -f2,3 kraken_output/kraken_all_unmapped.out > kraken_output/for_krona.txt
+ktImportTaxonomy -o kraken_output/unmapped_krona.html kraken_output/for_krona.txt
 
-kraken2 --db ~/kraken_gtdb_db --paired sample_R1.fastq.gz sample_R2.fastq.gz \
-  --report kraken_report.txt --output kraken_output.txt
+scp -r mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/co-assembly/megahit_out/kraken_output/unmapped_krona.html ~/Downloads/
+```
+  
 
 
 
