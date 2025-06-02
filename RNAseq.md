@@ -59,3 +59,7 @@ conda activate fastqc
 screen
 fastqc *fastq.gz
 ```
+
+## Remove rRNA reads
+
+
