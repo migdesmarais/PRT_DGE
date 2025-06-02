@@ -62,4 +62,26 @@ fastqc *fastq.gz
 
 ## Remove rRNA reads
 
+```
+conda create --name sortmerna_env
+conda activate sortmerna_env
+conda install sortmerna
+
+# install database
+wget https://github.com/biocore/sortmerna/releases/download/v4.3.4/database.tar.gz
+mkdir rRNA_databases_v4
+tar -xvf database.tar.gz -C rRNA_databases_v4
+
+# run it
+for R1 in *paired_R1.fastq.gz; do \
+  R2=${R1/_R1/_R2}; \
+  base=${R1%%_R1.fastq.gz}; \
+  sortmerna \
+    --ref /scratch/mdesmarais/PRT_DGE/reads_rna/sortmerna_db/rRNA_databases_v4/smr_v4.3_default_db.fasta \
+    --reads $R1 --reads $R2 \
+    --workdir rrna_sorted_reads/${base}_sortmerna \
+    --aligned rrna_sorted_reads/${base}_rRNA \
+    --other rrna_sorted_reads/${base}_non_rRNA \
+    --fastx --log --threads 8; \
+done
 
