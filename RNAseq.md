@@ -84,4 +84,14 @@ for R1 in *paired_R1.fastq.gz; do \
     --other rrna_sorted_reads/${base}_non_rRNA \
     --fastx --log --threads 8; \
 done
+```
+
+## Map and count reads
+```
+conda create -n salmon salmon
+conda activate salmon
+
+
+
+
 
