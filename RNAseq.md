@@ -86,11 +86,18 @@ for R1 in *paired_R1.fastq.gz; do \
 done
 ```
 
+## Create transcriptome
+```
+conda activate spades_env
+
+
+```
+
 ## Map and count reads
 ```
 conda create -n salmon salmon
 conda activate salmon
-
+```
 
 
 
