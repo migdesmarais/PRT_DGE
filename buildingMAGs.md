@@ -303,9 +303,164 @@ ktImportTaxonomy -o kraken_output/unmapped_krona.html kraken_output/for_krona.tx
 scp -r mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/co-assembly/megahit_out/kraken_output/unmapped_krona.html ~/Downloads/
 ```
   
+## Predict ORFs with prodigal
+```
+prodigal -i flavo.fasta -a prodigal/flavo_proteins.faa -d prodigal/flavo_nucleotides.fna -f gff -o prodigal/flavo_genes.gff -p meta
+seqkit stats flavo_nucleotides.fna
+seqkit stats flavo_proteins.faa
+
+prodigal -i marini.fasta -a prodigal/marini_proteins.faa -d prodigal/marini_nucleotides.fna -f gff -o prodigal/marini_genes.gff -p meta
+seqkit stats marini_nucleotides.fna
+seqkit stats marini_proteins.faa
+
+prodigal -i mori.fasta -a prodigal/mori_proteins.faa -d prodigal/mori_nucleotides.fna -f gff -o prodigal/mori_genes.gff -p meta
+seqkit stats mori_nucleotides.fna
+seqkit stats mori_proteins.faa
+
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats marini_nucleotides.fna
+file                    format  type  num_seqs    sum_len  min_len  avg_len  max_len
+marini_nucleotides.fna  FASTA   DNA      3,708  3,996,234       69  1,077.7   12,237
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats flavo_nucleotides.fna
+file                   format  type  num_seqs    sum_len  min_len  avg_len  max_len
+flavo_nucleotides.fna  FASTA   DNA      3,326  3,182,712       60    956.9    9,678
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats flavo_proteins.faa
+file                format  type     num_seqs    sum_len  min_len  avg_len  max_len
+flavo_proteins.faa  FASTA   Protein     3,326  1,060,904       20      319    3,226
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats marini_nucleotides.fna
+file                    format  type  num_seqs    sum_len  min_len  avg_len  max_len
+marini_nucleotides.fna  FASTA   DNA      3,708  3,996,234       69  1,077.7   12,237
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats marini_proteins.faa
+file                 format  type     num_seqs    sum_len  min_len  avg_len  max_len
+marini_proteins.faa  FASTA   Protein     3,708  1,332,078       23    359.2    4,079
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats mori_nucleotides.fna
+file                  format  type  num_seqs    sum_len  min_len  avg_len  max_len
+mori_nucleotides.fna  FASTA   DNA      3,978  3,924,498       66    986.6    8,484
+(seqkit) [mdesmarais@fram prodigal]$ seqkit stats mori_proteins.faa
+file               format  type     num_seqs    sum_len  min_len  avg_len  max_len
+mori_proteins.faa  FASTA   Protein     3,978  1,308,166       22    328.9    2,828
+
+```
+
+## DRAM
+```
+git clone https://github.com/WrightonLabCSU/DRAM.git
+cd DRAM
+conda env create -f environment.yaml -n DRAM
+conda activate DRAM
+pip install .
+
+seqkit seq -m 14 flavo_proteins.faa > flavo_proteins_14min.faa
+
+DRAM.py annotate \
+  -i flavo_proteins_min100.faa \
+  -o DRAM/flavo_dram_output \
+  --threads 8
+```
+
+## Eggnog mapper
+```
+conda create --name eggnog
+conda activate eggnog
+conda install -c bioconda -c conda-forge eggnog-mapper
+
+mkdir /home/mdesmarais/.conda/envs/eggnog/lib/python2.7/site-packages/data
+download_eggnog_data.py
+
+emapper.py \
+  -i flavo_proteins.faa \
+  -o eggnog/flavo_emapper \
+  --cpu 8 \
+  -m diamond \
+  --data_dir /home/mdesmarais/.conda/envs/eggnog/lib/python2.7/site-packages/data
+
+emapper.py \
+  -i mori_proteins.faa \
+  -o eggnog/mori_emapper \
+  --cpu 8 \
+  -m diamond \
+  --data_dir /home/mdesmarais/.conda/envs/eggnog/lib/python2.7/site-packages/data
+
+emapper.py \
+  -i marini_proteins.faa \
+  -o eggnog/marini_emapper \
+  --cpu 8 \
+  -m diamond \
+  --data_dir /home/mdesmarais/.conda/envs/eggnog/lib/python2.7/site-packages/data
+
+```
+
+## Kofamscan
+```
+conda create --name kofamscan
+
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+
+conda install kofamscan
+
+mkdir kofam_db && cd kofam_db
+wget https://www.genome.jp/ftp/db/kofam/profiles.tar.gz
+wget https://www.genome.jp/ftp/db/kofam/ko_list.gz
+tar -xzf profiles.tar.gz
+gunzip ko_list.gz
 
 
 
+for hmm in /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles/*.hmm; do
+  KO=$(basename "$hmm" .hmm)
+  hmmsearch --cpu 1 --tblout kofamscan_manual/${KO}.tbl "$hmm" /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_proteins.faa > /dev/null
+done
+
+
+
+
+exec_annotation \
+  -o kofamscan/flavo_kofamscan.tsv \
+  -f detail-tsv \
+  -p /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles \
+  -k /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/ko_list \
+  /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_proteins.faa
+
+exec_annotation \
+  -o kofamscan/marini_kofamscan.tsv \
+  -f detail-tsv \
+  -p /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles \
+  -k /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/ko_list \
+  /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/marini_proteins.faa
+
+exec_annotation \
+  -o kofamscan/mori_kofamscan.tsv \
+  -f detail-tsv \
+  -p /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles \
+  -k /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/ko_list \
+  /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/mori_proteins.faa
+```
+
+## Prokka
+```
+conda create --name prokka
+conda activate prokka
+conda install -c conda-forge -c bioconda -c defaults prokka
+
+```
+
+## InterProScan
+```
+conda create --name interproscan
+conda activate interproscan
+
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+
+conda install interproscan
+
+interproscan.sh -i mori_proteins_clean.faa -f tsv -o output.tsv --goterms --iprlookup
+
+```
 
 
 
