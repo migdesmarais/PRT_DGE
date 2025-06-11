@@ -343,18 +343,28 @@ mori_proteins.faa  FASTA   Protein     3,978  1,308,166       22    328.9    2,8
 
 ## DRAM
 ```
+#ende dup running DRAM on KBASE it's horrible to install
+scp -r ~/Downloads/84_DRAM mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/MAGs/prodigal/DRAM
+scp -r ~/Downloads/117_DRAM mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/MAGs/prodigal/DRAM
+scp -r ~/Downloads/bin1_DRAM mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/MAGs/prodigal/DRAM
+
+
 git clone https://github.com/WrightonLabCSU/DRAM.git
 cd DRAM
 conda env create -f environment.yaml -n DRAM
 conda activate DRAM
 pip install .
+cd /sc
+
+DRAM-setup.py prepare_databases --output_dir DRAM_data --threads 8 &> dram_setup.log
+DRAM-setup.py --output_dir DRAM_data --threads 8 &> dram_setup.log
 
 seqkit seq -m 14 flavo_proteins.faa > flavo_proteins_14min.faa
 
 DRAM.py annotate \
   -i flavo_proteins_min100.faa \
   -o DRAM/flavo_dram_output \
-  --threads 8
+  --threads 
 ```
 
 ## Eggnog mapper
@@ -389,55 +399,6 @@ emapper.py \
 
 ```
 
-## Kofamscan
-```
-conda create --name kofamscan
-
-conda config --add channels defaults
-conda config --add channels bioconda
-conda config --add channels conda-forge
-conda config --set channel_priority strict
-
-conda install kofamscan
-
-mkdir kofam_db && cd kofam_db
-wget https://www.genome.jp/ftp/db/kofam/profiles.tar.gz
-wget https://www.genome.jp/ftp/db/kofam/ko_list.gz
-tar -xzf profiles.tar.gz
-gunzip ko_list.gz
-
-
-
-for hmm in /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles/*.hmm; do
-  KO=$(basename "$hmm" .hmm)
-  hmmsearch --cpu 1 --tblout kofamscan_manual/${KO}.tbl "$hmm" /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_proteins.faa > /dev/null
-done
-
-
-
-
-exec_annotation \
-  -o kofamscan/flavo_kofamscan.tsv \
-  -f detail-tsv \
-  -p /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles \
-  -k /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/ko_list \
-  /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_proteins.faa
-
-exec_annotation \
-  -o kofamscan/marini_kofamscan.tsv \
-  -f detail-tsv \
-  -p /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles \
-  -k /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/ko_list \
-  /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/marini_proteins.faa
-
-exec_annotation \
-  -o kofamscan/mori_kofamscan.tsv \
-  -f detail-tsv \
-  -p /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/profiles \
-  -k /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/kofam_db/ko_list \
-  /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/mori_proteins.faa
-```
-
 ## Prokka
 ```
 conda create --name prokka
@@ -458,7 +419,39 @@ conda config --set channel_priority strict
 
 conda install interproscan
 
-interproscan.sh -i mori_proteins_clean.faa -f tsv -o output.tsv --goterms --iprlookup
+mkdir my_interproscan
+cd my_interproscan
+wget https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.74-105.0/interproscan-5.74-105.0-64-bit.tar.gz
+wget https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.74-105.0/interproscan-5.74-105.0-64-bit.tar.gz.md5
+
+# Recommended checksum to confirm the download was successful:
+md5sum -c interproscan-5.74-105.0-64-bit.tar.gz.md5
+# Must return *interproscan-5.74-105.0-64-bit.tar.gz: OK*
+# If not - try downloading the file again as it may be a corrupted copy.
+
+tar -pxvzf interproscan-5.74-105.0-*-bit.tar.gz
+
+python3 setup.py -f interproscan.properties
+
+conda create -n java11-env openjdk=11 -y
+conda activate java11-env
+java -version
+
+# Test with mobiD
+./interproscan.sh -i test_all_appl.fasta -f tsv -dp -exclappl MobiDBLite
+./interproscan.sh -i test_all_appl.fasta -f tsv
+
+awk '/^>/ {match($0, /ID=([^;]+)/, a); print ">" a[1]; next} {gsub(/\*$/, "", $0); print}' marini_proteins.faa > marini_clean.faa
+
+./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_clean.faa -exclappl MobiDBLite -goterms
+./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_clean.faa -exclappl MobiDBLite -goterms &> flavo.log
+
+./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/mori_clean.faa -exclappl MobiDBLite -goterms &> mori.log
+
+./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/marini_clean.faa -exclappl MobiDBLite -goterms &> marini.log
+
+
+
 
 ```
 
