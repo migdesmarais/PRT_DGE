@@ -304,7 +304,14 @@ scp -r mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/co-assembly/megahit_
 ```
   
 ## Predict ORFs with prodigal
+
+
 ```
+conda create --name prodigal
+conda activate prodigal
+conda install -c bioconda -c conda-forge prodigal
+mkdir prodigal
+
 prodigal -i flavo.fasta -a prodigal/flavo_proteins.faa -d prodigal/flavo_nucleotides.fna -f gff -o prodigal/flavo_genes.gff -p meta
 seqkit stats flavo_nucleotides.fna
 seqkit stats flavo_proteins.faa
