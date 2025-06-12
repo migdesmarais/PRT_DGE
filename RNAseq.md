@@ -89,14 +89,91 @@ done
 ## Create transcriptome
 ```
 conda activate spades_env
-
+??? #only if going from trnascitpome down, but trying MAGs up first
 
 ```
 
 ## Map and count reads
 ```
-conda create -n salmon salmon
-conda activate salmon
+conda create --name salmon_env salmon=1.10.1 -c bioconda -c conda-forge -y
+conda activate salmon_env
+
+salmon index -t flavo_nucleotides.fna -i salmon/flavo_nucleotides_index
+salmon index -t marini_nucleotides.fna -i salmon/marini_nucleotides_index
+salmon index -t mori_nucleotides.fna -i salmon/mori_nucleotides_index
+
+nano run_salmon_quant.sh
+
+#!/bin/bash
+
+# Set directories
+READ_DIR="/scratch/mdesmarais/PRT_DGE/rrna_sorted_reads"
+INDEX_DIR="/scratch/mdesmarais/PRT_DGE/salmon_quant/salmon_indexes"
+OUT_DIR="/scratch/mdesmarais/PRT_DGE/salmon_quant"
+
+# Loop through each MAG index directory
+for INDEX_PATH in "$INDEX_DIR"/*_index; do
+    MAG_NAME=$(basename "$INDEX_PATH" _index)
+
+    # Loop through each non-rRNA paired sample
+    for R1 in "$READ_DIR"/*_paired_non_rRNA.fq.gz; do
+        SAMPLE_NAME=$(basename "$R1" _paired_non_rRNA.fq.gz)
+        SAMPLE_OUT="$OUT_DIR/${MAG_NAME}_${SAMPLE_NAME}"
+
+        echo "Running Salmon for $SAMPLE_NAME on $MAG_NAME"
+
+        mkdir -p "$SAMPLE_OUT"
+
+        salmon quant -i "$INDEX_PATH" -l A \
+            -r "$R1" \
+            -o "$SAMPLE_OUT" \
+            --validateMappings \
+            --gcBias
+    done
+done
+
+chmod +x run_salmon_quant.sh
+conda activate salmon_env
+
+# calculate hits
+nano summarize_salmon_stats.sh
+
+#!/bin/bash
+
+# Directory containing Salmon quant outputs
+SALMON_DIR="/scratch/mdesmarais/PRT_DGE/salmon_quant"
+
+# Print header
+echo -e "MAG\tSample\tTotal_Fragments\tMapped_Reads\tMapping_Rate(%)"
+
+# Loop over each subdirectory
+for D in "$SALMON_DIR"/*; do
+    if [[ -d "$D" && -f "$D/lib_format_counts.json" ]]; then
+
+        # Extract MAG and Sample info from folder name
+        BASENAME=$(basename "$D")
+        MAG=$(echo "$BASENAME" | cut -d'_' -f1)
+        SAMPLE=$(echo "$BASENAME" | cut -d'_' -f2-)
+
+        # Extract total fragments processed and mapped
+        TOTAL=$(grep '"num_processed"' "$D/lib_format_counts.json" | grep -o '[0-9]\+')
+        HITS=$(grep '"num_mapped"' "$D/lib_format_counts.json" | grep -o '[0-9]\+')
+
+        # Compute mapping rate
+        if [[ "$TOTAL" -gt 0 ]]; then
+            RATE=$(awk "BEGIN {printf \"%.2f\", ($HITS/$TOTAL)*100}")
+        else
+            RATE="NA"
+        fi
+
+        # Output line
+        echo -e "${MAG}\t${SAMPLE}\t${TOTAL}\t${HITS}\t${RATE}"
+    fi
+done
+
+chmod +x summarize_salmon_stats.sh
+
+
 ```
 
 
