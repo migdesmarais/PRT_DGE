@@ -381,6 +381,7 @@ conda activate eggnog
 conda install -c bioconda -c conda-forge eggnog-mapper
 
 mkdir /home/mdesmarais/.conda/envs/eggnog/lib/python2.7/site-packages/data
+cd /home/mdesmarais/.conda/envs/eggnog/lib/python2.7/site-packages/data
 download_eggnog_data.py
 
 emapper.py \
