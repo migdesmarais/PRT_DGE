@@ -452,14 +452,16 @@ java -version
 awk '/^>/ {match($0, /ID=([^;]+)/, a); print ">" a[1]; next} {gsub(/\*$/, "", $0); print}' marini_proteins.faa > marini_clean.faa
 
 ./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_clean.faa -exclappl MobiDBLite -goterms
+
 ./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/flavo_clean.faa -exclappl MobiDBLite -goterms &> flavo.log
-
 ./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/mori_clean.faa -exclappl MobiDBLite -goterms &> mori.log
-
 ./interproscan.sh -i /scratch/mdesmarais/PRT_DGE/MAGs/prodigal/marini_clean.faa -exclappl MobiDBLite -goterms &> marini.log
 
+Cathryn:
+./interproscan.sh -i /scratch/cdsephus/prodigal/M_naut_AminoAcids_clean.faa -b /scratch/cdsephus/interproscan/M_naut -exclappl MobiDBLite -goterms &> /scratch/cdsephus/interproscan/M_naut.log
 
-
+./interproscan.sh -i /scratch/cdsephus/prodigal/M_sal_AminoAcids_clean.faa -b /scratch/cdsephus/interproscan/M_sal -exclappl MobiDBLite -goterms &> /scratch/cdsephus/interproscan/M_sal.log
+./interproscan.sh -i /scratch/cdsephus/prodigal/M_sim_AminoAcids_clean.faa -b /scratch/cdsephus/interproscan/M_sim -exclappl MobiDBLite -goterms &> /scratch/cdsephus/interproscan/M_sim.log
 
 ```
 
