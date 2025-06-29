@@ -87,9 +87,25 @@ done
 ```
 
 ## Create transcriptome
+# One way of doing things, assemble metatranscriptome and do a DGE in parallel with the MAGs way up approach.
 ```
-conda activate spades_env
-??? #only if going from trnascitpome down, but trying MAGs up first
+conda create -n rna_spades_env python=3.9 spades=3.15.5 -c bioconda -c conda-forge
+conda activate rna_spades_env
+
+mkdir rnaSPAdes_output
+
+for fq in *_paired_non_rRNA.fq.gz; do
+    sample=$(basename "$fq" _paired_non_rRNA.fq.gz)
+    echo "🔧 Assembling $sample..."
+
+    rnaspades.py \
+        -s "$fq" \
+        -o "/scratch/mdesmarais/PRT_DGE/rnaSPAdes_output/$sample" \
+        --threads 12 --memory 64
+done
+
+
+# ORFs with prodigal
 
 ```
 
