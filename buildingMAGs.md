@@ -212,25 +212,18 @@ scp mdesmarais@fram.ucsd.edu:/scratch/mdesmarais/PRT_DGE/co-assembly/megahit_out
 
 ## Assign taxonomy
 ```
-conda create -n gtdbtk_env -c bioconda -c conda-forge gtdbtk
 conda activate gtdbtk_env
-gtdbtk --help
+export GTDBTK_DATA_PATH=/data_store/gtdbtk_db/release226   # your DB
 
-export GTDBTK_DATA_PATH=/data_store/gtdbtk_db/release226
-
-gtdbtk classify_wf \
-  --genome_dir /scratch/mdesmarais/PRT_DGE/co-assembly/megahit_out/dastool_output_DASTool_bins/gtdbtk_ready_MAGs \
-  --out_dir gtdbk_output \
-  --cpus 12 \
-  --extension fa \
-  --mash_db PRT_DGE_mash.msh
+EXT=fasta
+OUT=/scratch/mdesmarais/PRT_DGE/MAGs/gtdbtk-ani
 
 gtdbtk classify_wf \
-  --genome_dir gtdbtk_ready_MAGs \
-  --out_dir gtdbtk_output \
-  --cpus 12 \
-  --mash_db your_custom_or_ref.msh
-
+  --genome_dir /scratch/mdesmarais/PRT_DGE/MAGs \
+  --extension "$EXT" \
+  --out_dir "$OUT" \
+  --cpus 24 \
+  --mash_db /scratch/mdesmarais/gtdbtk_mash.msh
 ```
 
 
