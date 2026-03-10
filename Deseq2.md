@@ -7,3 +7,4 @@ scp ~/Downloads/MAGs_Sample_Metadata.csv mdesmarais@fram.ucsd.edu:/scratch/mdesm
 http://fram.ucsd.edu:8787/auth-sign-in?appUri=%2F
 ```
 
+# Ran deseq2 in R on server
